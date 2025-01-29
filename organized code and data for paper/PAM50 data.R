@@ -13,13 +13,14 @@ library(caTools)
 library(caret)
 library(pheatmap)
 
-#genes=load("~/Documents/Dissertation/varguid/PAM50.RData")
+genes=load("~/Documents/Dissertation/varguid/PAM50.RData")
 
 ##### p=50
   rmse=NULL
   real= as.data.frame(cbind(genes,outcome)) %>% drop_na(outcome)
   #real = na.omit(real)
   real <- cbind(makeX(real[,1:(ncol(real)-1)]), real[,ncol(real)])
+  real=apply(real,2,as.numeric)
   folds=createFolds(1:nrow(real), k = 10) ## 10 cv
   for (i in 1:10){
     print(i) 
