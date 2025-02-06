@@ -1,6 +1,6 @@
 
 source("./leash2.0.7.R")
-source("./VarGuid20240626.R")
+source("./VarGuid20250205.R")
 #source("./organized code:data/functions.R")
 library(glmnet)
 library(tidyverse)
@@ -18,6 +18,7 @@ genes=load("~/Documents/Dissertation/varguid/PAM50.RData")
 ##### p=50
   rmse=NULL
   real= as.data.frame(cbind(genes,outcome)) %>% drop_na(outcome)
+  #real= as.data.frame(cbind(topgene,outcome)) %>% drop_na(outcome)
   #real = na.omit(real)
   real <- cbind(makeX(real[,1:(ncol(real)-1)]), real[,ncol(real)])
   real=apply(real,2,as.numeric)
@@ -53,7 +54,7 @@ genes=load("~/Documents/Dissertation/varguid/PAM50.RData")
 #######
     data=list(x = makeX(as.data.frame(real[,1:(ncol(real)-1)])),
               y= real[,ncol(real)])
-    ### Varguild Lasso
+    ### Varguid Lasso
     set.seed(2024)
     o1 <- lmv(X =as.matrix(data$x) , Y = unlist(data$y), lasso = TRUE)
     m=as.data.frame(as.matrix(o1$beta)) %>% filter(s0>0)
