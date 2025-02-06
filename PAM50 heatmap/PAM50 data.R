@@ -12,12 +12,14 @@ library(olsrr)
 library(caTools)
 library(caret)
 library(pheatmap)
+library(glmnetUtils)
 
-genes=load("~/Documents/Dissertation/varguid/PAM50.RData")
+#genes=load("~/Documents/Dissertation/varguid/PAM50.RData")
 
 ##### p=50
   rmse=NULL
-  real= as.data.frame(cbind(genes,outcome)) %>% drop_na(outcome)
+  #real= as.data.frame(cbind(topgene,outcome)) %>% drop_na(outcome)
+ real= as.data.frame(cbind(genes,outcome)) %>% drop_na(outcome)
   #real = na.omit(real)
   real <- cbind(makeX(real[,1:(ncol(real)-1)]), real[,ncol(real)])
   real=apply(real,2,as.numeric)
@@ -51,15 +53,17 @@ genes=load("~/Documents/Dissertation/varguid/PAM50.RData")
 
 ######## PAM50 number of overlapped selected genes
 #######
+  #
     data=list(x = makeX(as.data.frame(real[,1:(ncol(real)-1)])),
               y= real[,ncol(real)])
-    ### Varguild Lasso
+    ### Varguid Lasso
     set.seed(2024)
-    o1 <- lmv(X =as.matrix(data$x) , Y = unlist(data$y), lasso = TRUE)
-    m=as.data.frame(as.matrix(o1$beta)) %>% filter(s0>0)
+    o1 <- lmv(X =as.matrix(data$x) , Y = unlist(data$y), lasso = TRUE) ###lasso true
+    m=as.data.frame(as.matrix(o1$beta)) %>% filter(s0>0) %>% slice(-1)
     n1=nrow(m)
     select1=rownames(m) # 
     ### Lasso
+    set.seed(2024)
     o2 <- cv.glmnet(x =as.matrix(data$x) , y = data$y,alpha = 1,lambda =exp(seq(-10,10,length=200) ))
     m2=as.data.frame(as.matrix(coef(o2, s = "lambda.min"))) %>% filter(s1>0)
     n2=nrow(m2)

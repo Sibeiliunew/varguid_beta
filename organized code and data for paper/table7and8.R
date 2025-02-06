@@ -12,10 +12,10 @@ library(caTools)
 ###   n = 500, d = 15 for low p case
 ###   n = 100, d = 200 for high p case
 ####################################################################
-## data settings for low p
+## data settings for low p. lasso = FALSE
 n <- 500
 d <- 15
-corrv <- c(0, .9)[1]
+corrv <- c(0, .9)[2]
 
 
 simnames <- c("cobra2",    "cobra8",    "friedman1", "friedman3", "inx1",      
@@ -56,7 +56,8 @@ for (c in 1:10){
 }
 
 table3=do.call("rbind",rmse_res3)
-round(table3,2)
+rownames(table3)=simnames
+t3=round(table3,3)
 
 #######
 ##### for table 8: lasso and var-lasso overlap
@@ -100,10 +101,12 @@ rownames(table2)=simnames3
 
 
 ######RMSE
-##### larger p
+##### larger p lasso = TRUE
 n <- 100
 d <- 200
-corrv <- c(0, .9)[1] ## change
+corrv <- c(0, .9)[2] ## change
+rmse <- c()
+rmse_res4=NULL
 
 for (c in 1:10){
   for( i in 1:50){
@@ -129,14 +132,16 @@ for (c in 1:10){
 }
 
 table4=do.call("rbind",rmse_res4)
-table4
+rownames(table4)=simnames
+t4=round(table4,5)
 
 
 
 
 
 
-rmse4 <- c()
+
+rmse <- c()
 rmse_res4=NULL
 
 for (c in 1:10){
