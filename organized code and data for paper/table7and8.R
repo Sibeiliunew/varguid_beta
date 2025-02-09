@@ -63,53 +63,16 @@ table3_3=do.call("rbind",rmse_res3)
 rownames(table3_3)=simnames
 t3_3=round(table3_3,3)
 
-#######
-##### for table 8: lasso and var-lasso overlap
-
-
-n <- 100
-d <- 200
-corrv <- c(0, .9)[1] ## change
-rmse_res1=NULL
-rmse_res2=NULL
-simnames2=c("cobra2", "inx2", "inx3","lmi2" )
-simnames3=c("cobra2", "inx3","lmi2","sup" )
-######
-for (c in 1:4){
-  set.seed(2024)
-  simo <- simulation.sum[[simnames3[c]]](n=n, d=d, corrv = corrv)$dta
-    print(c)
-    data=list(x = makeX(simo[,1:(ncol(simo)-1)]),
-              y= simo[,ncol(simo)])
-    ### Varguild Lasso
-    set.seed(2024)
-    o1 <- lmv(X =as.matrix(data$x) , Y = unlist(data$y), lasso = TRUE)
-    m=as.data.frame(as.matrix(o1$beta)) %>% filter(s0>0)
-    n1=nrow(m)
-    select1=rownames(m) # 
-    ### Lasso
-    set.seed(2024)
-    o2 <- cv.glmnet(x =as.matrix(data$x) , y = data$y,alpha = 1, maxit = 5000)
-    m2=as.data.frame(as.matrix(coef(o2, s = "lambda.min"))) %>% filter(s1>0)
-    n2=nrow(m2)
-    select1=rownames(m2) 
-    
-    n_ol=length(intersect(select1,select2))
-    
-  rmse_res2[[c]]=c(n1,n2,n_ol)
-}
-
-table1=do.call("rbind",rmse_res1)
-rownames(table1)=simnames2
-table2=do.call("rbind",rmse_res2)
-rownames(table2)=simnames3
-
 
 ######RMSE
 ##### larger p lasso = TRUE
 simnames <- c(#"cobra2" )     
               "lmi2",      
               "sup")   
+simnames=c("cobra2",    "cobra8",    "friedman1", "friedman3", "inx1",      
+           "inx2", "inx3",     # "lm",        "lmi",       
+           "lmi2",      
+           "sup",       "sup2") 
 
 n <- 100
 d <- 200
@@ -149,40 +112,53 @@ table4_4=do.call("rbind",rmse_res4)
 rownames(table4_4)=simnames
 t4_4=round(table4_4,5)
 
+#######
+##### for table 8: lasso and var-lasso overlap for simulated data
+####larger p lasso = TRUE
 
-
-
-rmse <- c()
-rmse_res4=NULL
-
-for (c in 1:10){
-  for( i in 1:50){
-    print(i)
-    simo <- simulation.sum[[simnames[c]]](n=n, d=d, corrv = corrv)$dta
-    trn <- sample.split(1:n, SplitRatio = 0.75)
-    train  <- subset(simo, trn==TRUE)
-    test   <- subset(simo, trn==FALSE)
-    data=list(x.train = makeX(train[,1:(ncol(simo)-1)]),
-              y.train = train[,ncol(simo)],
-              x.test = makeX(test[,1:(ncol(simo)-1)]),
-              y.test = test[,ncol(simo)])
-    
-    o <- lmv(X =as.matrix(data$x.train) , Y = unlist(data$y.train), lasso = TRUE) # , lasso = TRUE
-    y.obj <-ymodv(obj = o,gamma = c(seq(0,9, length.out=5)), phi = 0.46)#, rf = FALSE)
-    
-    
-    pred <- fnpred(mod=y.obj,lmvo = o,newdata = data$x.test)
-    
-    rmse4 <- rbind(rmse,sqrt(colMeans((matrix(rep(data$y.test,ncol(pred)),length(data$y.test))-pred)^2)) )
-  }
-  rmse_res4[[c]]=colMeans(as.data.frame(rmse4))
+n <- 100
+d <- 200
+corrv <- c(0, .9)[2] ## change
+overlap_res1=NULL
+overlap_res2=NULL
+simnames=c("cobra2",    "cobra8",    "friedman1", "friedman3", "inx1",      
+           "inx2", "inx3",     # "lm",        "lmi",       
+           "lmi2",      
+           "sup",       "sup2")   
+######
+for (c in 1:length(simnames)){
+  set.seed(2024)
+  simo <- simulation.sum[[simnames[c]]](n=n, d=d, corrv = corrv)$dta
+  print(c)
+  data=list(x = makeX(simo[,1:(ncol(simo)-1)]),
+            y= simo[,ncol(simo)])
+  ### Varguild Lasso
+  set.seed(2024)
+  o1 <- lmv(X =as.matrix(data$x) , Y = unlist(data$y), lasso = TRUE)
+  m=as.data.frame(as.matrix(o1$beta)) %>% filter(s0>0)
+  n1=nrow(m)
+  select1=rownames(m) # 
+  ### Lasso
+  set.seed(2024)
+  o2 <- cv.glmnet(x =as.matrix(data$x) , y = data$y,alpha = 1, maxit = 5000)
+  m2=as.data.frame(as.matrix(coef(o2, s = "lambda.min"))) %>% filter(s1>0)
+  n2=nrow(m2)
+  select2=rownames(m2) 
+  
+  n_ol=length(intersect(select1,select2))
+  
+  #overlap_res1[[c]]=c(n1,n2,n_ol)
+  overlap_res2[[c]]=c(n1,n2,n_ol)
 }
 
-table4=do.call("rbind",rmse_res4)
-table4
+table1=do.call("rbind",overlap_res1) # cor=0
+rownames(table1)=simnames
+
+table2=do.call("rbind",overlap_res2) # cor=0.9
+rownames(table2)=simnames
 
 
-#### for larger p real data
+###### for larger p real data
 #####
 
 library("datamicroarray")
@@ -227,8 +203,6 @@ for (i in 1:length(data.names)){
   realDat[[i]] <- cbind(x[,-index],x[,index])}
 }
 
-
-
 ##############
 overlap_res=NULL
 for (c in 1:10){
@@ -256,14 +230,15 @@ for (c in 1:10){
 
 table4=do.call("rbind",overlap_res)
 
-####### RMSE
-#corrv <- c(0, .9)[1]
-#rmse4 <- c()
-#rmse_res4=NULL
+####### RMSE for real data
+rmse <- c()
+rmse_real=NULL
+table_real=NULL
 
-for (c in 1:10){
+for (c in 1:length(outcomes)){
   real <- realDat[[c]]
-  folds=createFolds(1:nrow(real), k = 10)
+  for (k in 1:50){ ### repeat the cv 50 times
+    folds=createFolds(1:nrow(real), k = 10)
   for( i in 1:10){
     print(i)
     #trn <- sample.split(1:nrow(real), SplitRatio = 0.75)
@@ -280,13 +255,15 @@ for (c in 1:10){
     
     pred <- fnpred(mod=y.obj,lmvo = o,newdata = data$x.test)
     
-    rmse4 <- rbind(rmse,sqrt(colMeans((matrix(rep(data$y.test,ncol(pred)),length(data$y.test))-pred)^2)) )
+    rmse <- rbind(rmse,sqrt(colMeans((matrix(rep(data$y.test,ncol(pred)),length(data$y.test))-pred)^2)) )
   }
-  rmse_res4[[c]]=colMeans(as.data.frame(rmse4))
+    rmse_real[k]=colMeans(as.data.frame(rmse))
+  }
+  table_real[c]=rbind(table_real,colMeans(rmse_real))
 }
 
-table4=do.call("rbind",rmse_res4)
-table4
+table_real$outcome=outcome
+table_real
 
 
 
