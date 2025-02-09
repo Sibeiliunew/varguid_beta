@@ -1,5 +1,5 @@
 source("./20240425/simulation/generate_function_simulation.R")
-source("./VarGuid20250205.R")
+source("./VarGuid20250206.R")
 source("./leash2.0.7.R")
 library(glmnet)
 library(tidyverse)
@@ -44,7 +44,7 @@ for (c in 1:10){
             x.test = makeX(test[,1:(ncol(simo)-1)]),
             y.test = test[,ncol(simo)])
   
-  o <- lmv(X =as.matrix(data$x.train) , Y = unlist(data$y.train), lasso = FALSE) # , lasso = TRUE
+  o <- lmv(X =as.matrix(data$x.train) , Y = unlist(data$y.train), lasso = FALSE) # , 
   y.obj <-ymodv(o,gamma = c(seq(0,9, length.out=5)), phi = 0.46)#, rf = FALSE)
   
   
@@ -65,6 +65,7 @@ t3_3=round(table3_3,3)
 
 #######
 ##### for table 8: lasso and var-lasso overlap
+
 
 n <- 100
 d <- 200
@@ -106,13 +107,17 @@ rownames(table2)=simnames3
 
 ######RMSE
 ##### larger p lasso = TRUE
+simnames <- c(#"cobra2" )     
+              "lmi2",      
+              "sup")   
+
 n <- 100
 d <- 200
-corrv <- c(0, .9)[1] ## change
+corrv <- c(0, .9)[2] ## change
 rmse <- c()
 rmse_res4=NULL
 
-for (c in 1:10){
+for (c in 1:length(simnames)){
   for( i in 1:50){
     print(i)
     simo <- simulation.sum[[simnames[c]]](n=n, d=d, corrv = corrv)$dta

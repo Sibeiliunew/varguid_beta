@@ -99,6 +99,7 @@ obj.coef$HC5 <- coeftest(obj.varGuid, vcov = vcovHC(obj.varGuid, "HC5"))
 }  else {
   obj.lasso <- obj.OLS
   obj.OLS <- list()
+  if (obj.varGuid$df == 0) { o$obj.varGuid <- obj.lasso}
 }
 
 list(beta=beta, obj.OLS = obj.OLS, obj.lasso = obj.lasso,
