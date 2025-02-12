@@ -8,19 +8,19 @@ library(randomForestSRC)
 # convex clustering
 #####################
 
-covx <- function(x, knn = 9, phi = 0.46,  
-                 gamma = c(seq(0,8.56, length.out=5))){ # knn if wants knn kernel
+covx <- function(x, Knn = 9, phi = 0.46,  
+                 gamma = c(seq(0,8.56, length.out=5))){ # Knn if wants Knn kernel
   x <- as.data.frame(x)
   nums <- unlist(lapply(x, is.numeric))  
   X <- t(scale(as.matrix(x[,nums])))
   n <- ncol(X)
   ## Pick some weights and a sequence of regularization parameters.
   w <- kernel_weights(X,phi)
-  if (!is.null(knn)){
-    k <- knn
+  if (!is.null(Knn)){
+    k <- Knn
     w <- knn_weights(w,k,n) } 
   ## Perform clustering
-  list(sol = cvxclust(X,w,gamma), w = w, x = x[,nums], x.all = x, gamma = gamma, knn = knn )
+  list(sol = cvxclust(X,w,gamma), w = w, x = x[,nums], x.all = x, gamma = gamma, Knn = Knn )
 }
 #####################
 # plot path
@@ -106,10 +106,10 @@ list(rmse = unlist(mlm),q = unlist(q), gamma = obj$gamma)
 #####################################################
 # decide final model after optimizing gamma and phi
 ######################################################
-fnmod <- function(dat.x,dat.y,knn = 10, gamma = c(seq(0,8.56, length.out=5)), phi = 0.45)
+fnmod <- function(dat.x,dat.y,Knn = 10, gamma = c(seq(0,8.56, length.out=5)), phi = 0.45)
 {  data <- as.data.frame(dat.x)
 nums <- unlist(lapply(data, is.numeric))  
-obj <- covx(as.matrix(dat.x[,nums]),knn = knn,
+obj <- covx(x = as.matrix(dat.x[,nums]),Knn = Knn,
             gamma = gamma,phi = phi)
 w <- obj$w
 n <- dim(obj$sol$U[[1]])[2]
@@ -152,11 +152,11 @@ fnpred <- function(mod,lmvo,newdata){
     yhat0 <- yhat <- yhat2 <- predict(lmvo$obj.varGuid,as.data.frame(newdata))
     yhat0b <- yhatb <- yhat2b <- predict( lmvo$obj.OLS,as.data.frame(newdata))
   }
-  
  # if (!((length(unique(mod$data$z))==1)|(length(unique(mod$data$z))==nrow(mod$data)))) {
     datrf <- data.frame(Y = c(lmvo$obj.varGuid$residuals), #lmvo$obj.varGuid$model[,1] ,
-                              subset(lmvo$obj.varGuid$model, select = -c(1,ncol(lmvo$obj.varGuid$model))) )
-    if (dim(datrf)[2] == 1){
+                              subset(lmvo$obj.varGuid$model, select = -c(1,ncol(lmvo$obj.varGuid$model))) 
+                       )
+    if (dim(datrf)[2] <= 4){
       datrf <- data.frame(Y = c(lmvo$obj.varGuid$residuals), #lmvo$obj.varGuid$model[,1] ,
                           lmvo$X )
     }
@@ -175,7 +175,8 @@ fnpred <- function(mod,lmvo,newdata){
    # mod$data$y <- abs(resd)*sign(lmvo$obj.varGuid$residuals)
     mod$data$y[which(resd<0)] <- 0
     ycenter <- aggregate(y~z,data = mod$data,mean) 
-    yhat2 <- yhat0 + ycenter$y[match(dat.test$z,ycenter$z)]   
+    testrf <- predict(rfo,as.data.frame(newdata))
+    yhat2 <- c(yhat0) + c(testrf$predicted)
     yhat2b <- yhat0b + ycenter$y[match(dat.test$z,ycenter$z)]   
  # }
 
@@ -189,14 +190,24 @@ fnpred <- function(mod,lmvo,newdata){
 }
 #sm2 <- summary(mod.rlm)
 #print(sm2, digits=2, corr=T)   
-ymodv <- function(obj, knn = 10, gamma = c(seq(0,8.56, length.out=5)), phi = 0.45){
+ymodv <- function(obj, Knn = 10, gamma = c(seq(0,8.56, length.out=5)), phi = 0.45){
   dat <- obj$obj.varGuid$model
+  
+  
+  if (ncol(dat) == 3){
+    dat <- cbind(Y = obj$obj.varGuid$model[,1],
+                 obj$X[,order(cor(dat[,2],obj$X),decreasing = TRUE)[1:min(ncol(obj$X),5)]],
+                 weights = obj$obj.varGuid$model[,ncol(obj$obj.varGuid$model)])
+    dat <- as.data.frame(dat)
+  }
+  
+  
   colnames(dat)[ncol(dat)] <- "weights"
   
   mod <- fnmod( dat.x=subset(dat, select = -c(Y,weights)),
               # dat.x=data.frame(datY=dat$Y,resY=o$obj.varGuid$residuals,varhY=o$res$fitted.values),
                dat.y=dat$Y,
-               knn = knn,
+               Knn = Knn,
                gamma = gamma, phi = phi)
   mod
 }

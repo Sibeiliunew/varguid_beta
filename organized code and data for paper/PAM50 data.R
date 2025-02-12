@@ -1,6 +1,6 @@
 
-source("./leash2.0.7.R")
-source("./VarGuid20250206.R")
+source("./leash2.0.8.R")
+source("./VarGuid20250209.R")
 #source("./organized code:data/functions.R")
 library(glmnet)
 library(tidyverse)
@@ -17,12 +17,16 @@ genes=load("~/Documents/Dissertation/varguid/PAM50.RData")
 
 ##### p=50
   rmse=NULL
-  real= as.data.frame(cbind(genes,outcome)) %>% drop_na(outcome)
-  #real= as.data.frame(cbind(topgene,outcome)) %>% drop_na(outcome)
+  #real= as.data.frame(cbind(genes,outcome)) %>% drop_na(outcome)
+  real= as.data.frame(cbind(topgene,outcome)) %>% drop_na(outcome)
   #real = na.omit(real)
   real <- cbind(makeX(real[,1:(ncol(real)-1)]), real[,ncol(real)])
   real=apply(real,2,as.numeric)
-  folds=createFolds(1:nrow(real), k = 10) ## 10 cv
+  table_pam50=matrix(data=rep(NA,10*6), nrow=10, ncol=6) 
+  for (k in 1:10){ ### repeat the cv 50 times
+    print(k) 
+    folds=createFolds(1:nrow(real), k = 10)
+    rmse=NULL
   for (i in 1:10){
     print(i) 
     #trn <- sample.split(1:nrow(real), SplitRatio = 0.75)
@@ -44,11 +48,11 @@ genes=load("~/Documents/Dissertation/varguid/PAM50.RData")
     rmse <- rbind(rmse,sqrt(colMeans((matrix(rep(data$y.test,ncol(pred)),length(data$y.test))-pred)^2)) )
     
   }
-  #rmse_res[[d]]=colMeans(as.data.frame(rmse))
+    table_pam50[k,]=colMeans(as.data.frame(rmse),na.rm = TRUE)
+  }
   
-  
-  table1=colMeans(as.data.frame(rmse))
-  table1
+  tablermse_pam50=colMeans(as.data.frame(table_pam50),na.rm = TRUE)
+  tablermse_pam50
 
 ######## PAM50 number of overlapped selected genes
 #######

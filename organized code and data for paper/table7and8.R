@@ -1,6 +1,6 @@
 source("./20240425/simulation/generate_function_simulation.R")
-source("./VarGuid20250206.R")
-source("./leash2.0.7.R")
+source("./leash2.0.8.R")
+source("./VarGuid20250209.R")
 library(glmnet)
 library(tidyverse)
 library(caret)
@@ -27,7 +27,7 @@ simnames <- c("cobra2",    "cobra8",    "friedman1", "friedman3", "inx1",
 #simo <- simulation.sum[[simnames[i]]](n=n, d=d, corrv = corrv)$dta
 n <- 500
 d <- 15
-corrv <- c(0, .9)[1] ## change
+corrv <- c(0, .9)[2] ## change
 rmse3 <- c()
 rmse_res3=NULL
 
@@ -50,9 +50,9 @@ for (c in 1:10){
   
   pred <- fnpred(mod=y.obj,lmvo = o,newdata = data$x.test)
   
-  rmse3 <- rbind(rmse3,sqrt(colMeans((matrix(rep(data$y.test,ncol(pred)),length(data$y.test))-pred)^2)) )
+  rmse3 <- rbind(rmse3,sqrt(colMeans((matrix(rep(data$y.test,ncol(pred)),length(data$y.test))-pred)^2,na.rm = T)) )
   }
-  rmse_res3[[c]]=colMeans(as.data.frame(rmse3))
+  rmse_res3[[c]]=colMeans(as.data.frame(rmse3),na.rm = T)
 }
 
 table3=do.call("rbind",rmse_res3)
@@ -61,18 +61,20 @@ t3=round(table3,5)
 
 table3_3=do.call("rbind",rmse_res3)
 rownames(table3_3)=simnames
-t3_3=round(table3_3,3)
+t3_3=round(table3_3,5)
 
 
 ######RMSE
 ##### larger p lasso = TRUE
-simnames <- c(#"cobra2" )     
-              "lmi2",      
-              "sup")   
-simnames=c("cobra2",    "cobra8",    "friedman1", "friedman3", "inx1",      
-           "inx2", "inx3",     # "lm",        "lmi",       
-           "lmi2",      
-           "sup",       "sup2") 
+
+#simnames=c("cobra2",    "cobra8",    "friedman1", "friedman3", "inx1",      
+#           "inx2", "inx3",     # "lm",        "lmi",       
+#           "lmi2",      
+#           "sup",       "sup2") 
+simnames=c("lmi2")
+
+
+simnames=c("cobra2") 
 
 n <- 100
 d <- 200
@@ -98,10 +100,18 @@ for (c in 1:length(simnames)){
     
     pred <- fnpred(mod=y.obj,lmvo = o,newdata = data$x.test)
     
-    rmse4 <- rbind(rmse,sqrt(colMeans((matrix(rep(data$y.test,ncol(pred)),length(data$y.test))-pred)^2)) )
+    rmse4 <- rbind(rmse,sqrt(colMeans((matrix(rep(data$y.test,ncol(pred)),length(data$y.test))-pred)^2,na.rm = TRUE)) )
   }
-  rmse_res4[[c]]=colMeans(as.data.frame(rmse4))
+  rmse_res4[[c]]=colMeans(as.data.frame(rmse4),na.rm = TRUE)
 }
+
+table4_6=do.call("rbind",rmse_res4)
+rownames(table4_6)=simnames
+t4_6=round(table4_6,5)
+
+table4_5=do.call("rbind",rmse_res4)
+rownames(table4_5)=simnames
+t4_5=round(table4_5,5)
 
 table4=do.call("rbind",rmse_res4)
 rownames(table4)=simnames
@@ -118,13 +128,10 @@ t4_4=round(table4_4,5)
 
 n <- 100
 d <- 200
-corrv <- c(0, .9)[2] ## change
+corrv <- c(0, .9)[1] ## change
 overlap_res1=NULL
 overlap_res2=NULL
-simnames=c("cobra2",    "cobra8",    "friedman1", "friedman3", "inx1",      
-           "inx2", "inx3",     # "lm",        "lmi",       
-           "lmi2",      
-           "sup",       "sup2")   
+
 ######
 for (c in 1:length(simnames)){
   set.seed(2024)
@@ -203,7 +210,7 @@ for (i in 1:length(data.names)){
   realDat[[i]] <- cbind(x[,-index],x[,index])}
 }
 
-##############
+############## OVERLAPPED GENES
 overlap_res=NULL
 for (c in 1:10){
   real <- realDat[[c]]
@@ -232,18 +239,20 @@ table4=do.call("rbind",overlap_res)
 
 ####### RMSE for real data
 rmse <- c()
-rmse_real=NULL
-table_real=NULL
+table_real2=NULL
 
-for (c in 1:length(outcomes)){
+for (c in 7:length(outcomes)){
+  print(c)
   real <- realDat[[c]]
-  for (k in 1:50){ ### repeat the cv 50 times
+  rmse_real=matrix(data=rep(NA,50*6), nrow=50, ncol=6) # holder
+  for (k in 1:5){ ### repeat the cv 50 times
+    print(k)
     folds=createFolds(1:nrow(real), k = 10)
+    rmse=NULL
   for( i in 1:10){
-    print(i)
     #trn <- sample.split(1:nrow(real), SplitRatio = 0.75)
-    train  <- real[-folds[[i]],]
-    test   <- real[folds[[i]],]
+    train  <- as.data.frame(real[-folds[[i]],])
+    test   <- as.data.frame(real[folds[[i]],])
     data=list(x.train = makeX(train[,1:(ncol(real)-1)]),
               y.train = train[,ncol(real)],
               x.test = makeX(test[,1:(ncol(real)-1)]),
@@ -255,15 +264,18 @@ for (c in 1:length(outcomes)){
     
     pred <- fnpred(mod=y.obj,lmvo = o,newdata = data$x.test)
     
-    rmse <- rbind(rmse,sqrt(colMeans((matrix(rep(data$y.test,ncol(pred)),length(data$y.test))-pred)^2)) )
+    rmse <- rbind(rmse,sqrt(colMeans((matrix(rep(data$y.test,ncol(pred)),length(data$y.test))-pred)^2,na.rm = TRUE)) )
   }
-    rmse_real[k]=colMeans(as.data.frame(rmse))
+    rmse_real[k,]=colMeans(as.data.frame(rmse),na.rm = TRUE)
   }
-  table_real[c]=rbind(table_real,colMeans(rmse_real))
+  table_real2=rbind(table_real2,colMeans(as.data.frame(rmse_real),na.rm = TRUE))
 }
 
-table_real$outcome=outcome
-table_real
+#table_real2$outcome=outcome
+#table_real2$dataset=data.names
+tf2=round(table_real2,5)
+
+saveRDS(tf,"datamicroarray_10RMSE.RDS")
 
 
 
