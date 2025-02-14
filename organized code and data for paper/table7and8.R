@@ -1,6 +1,6 @@
 source("./20240425/simulation/generate_function_simulation.R")
-source("./leash2.0.8.R")
-source("./VarGuid20250209.R")
+source("./leash2.0.9.R")
+source("./VarGuid20250212.R")
 library(glmnet)
 library(tidyverse)
 library(caret)
@@ -199,16 +199,73 @@ print(colnames(x)[yindex])
 }
 
 outcomes=c("X765","OSM_P188_F","g1CNS26","D28473-s-at","V2006","V10234","898_s_at","V132","34320_at","BAX")
-realDat=NULL
-for (i in 1:length(data.names)){
-  nm <- data.names[i]
+realDat=realDat2=NULL
+for (w in 1:length(data.names)){
+  nm <- data.names[w]
   data(list=nm, package = 'datamicroarray')
   x <- eval(parse(text=nm))$x
-  if(i == 8){realDat[[i]] <- cbind(x[,-132],x[,132])} else{
-  index=which(colnames(x)==outcomes[i])
-  x <- scale(x)
-  realDat[[i]] <- cbind(x[,-index],x[,index])}
+ if(w == 8){realDat[[w]] <- cbind(x[,-132],x[,132])} else{
+#  index=which(colnames(x)==outcomes[w])
+  #x <- scale(x)
+ # realDat[[w]] <- data.frame(x[,-index],y=x[,index])}
+   x <- scale(x)
+  id=which(colnames(x)==outcomes[w])
+  realDat[[w]] <- data.frame(x[,-id],y=x[,id])
+}}
+
+
+###### RMSE for real data
+rmse <- function(dat,  yid = ncol(dat), lasso = FALSE){
+  return <- list()
+  dat <- as.data.frame(scale(dat))
+  train <- dat[1:round(nrow(dat)*0.8),]
+  test <- dat[-c(1:round(nrow(dat)*0.8)),]
+  X = train[,-yid]
+  Y = train[,yid]
+  
+  o <- lmv(X = X , Y = Y, lasso = lasso) # , lasso = TRUE
+  y.obj <- ymodv(obj = o,gamma = c(seq(0,9, length.out=5)), phi = 0.46)#, rf = FALSE)
+  
+  pred <- fnpred(mod=y.obj,lmvo = o,newdata = test[,-yid])
+  
+  return$varguid <- sqrt(colMeans((  matrix(replicate(ncol(pred),test[,yid]),ncol=ncol(pred))-pred)^2, na.rm = TRUE)) 
+  
+  
+  cv_model <- cv.glmnet(x = as.matrix(train[,-yid]) , y = train[,yid], alpha = 1, 
+                        nfolds = 10)
+  
+  #find optimal lambda value that minimizes test MSE
+  best_lambda <- cv_model$lambda.min
+  o <- glmnet(x = as.matrix(train[,-yid]) , y = train[,yid], alpha = 1, lambda = best_lambda)
+  
+  pred <- predict(o,newx = as.matrix(test[,-yid]))
+  
+  return$lasso <- sqrt(mean((test[,yid]-pred)^2)) 
+  return
 }
+
+table_real=NULL
+for (c in 6: length(outcomes)){
+  print(c)
+  real=realDat[[c]]
+  result <- lapply(1:100, function(i) {rmse(dat = real, lasso = TRUE)$varguid}) # 10 repeated train-test
+  table_real=rbind(table_real,colMeans(do.call(rbind,result)))
+}
+### 4
+data('pomeroy', package = 'datamicroarray')
+dat <- data.frame(pomeroy$x[,-which(colnames(pomeroy$x)=="D28473-s-at")],y=pomeroy$x[,"D28473-s-at"])
+result4 <- lapply(1:100, function(i) {rmse(dat = dat, lasso = TRUE)$varguid})
+colMeans(do.call(rbind,result4))
+
+### 5
+data('shipp', package = 'datamicroarray')
+dat <- data.frame(shipp$x[,-which(colnames(shipp$x)=="V2006")],y=shipp$x[,"V2006"])
+result5 <- lapply(1:100, function(i) {rmse(dat = dat, lasso = TRUE)$varguid})
+colMeans(do.call(rbind,result5))
+
+
+
+
 
 ############## OVERLAPPED GENES
 overlap_res=NULL
@@ -238,44 +295,44 @@ for (c in 1:10){
 table4=do.call("rbind",overlap_res)
 
 ####### RMSE for real data
-rmse <- c()
-table_real2=NULL
-
-for (c in 7:length(outcomes)){
-  print(c)
-  real <- realDat[[c]]
-  rmse_real=matrix(data=rep(NA,50*6), nrow=50, ncol=6) # holder
-  for (k in 1:5){ ### repeat the cv 50 times
-    print(k)
-    folds=createFolds(1:nrow(real), k = 10)
-    rmse=NULL
-  for( i in 1:10){
-    #trn <- sample.split(1:nrow(real), SplitRatio = 0.75)
-    train  <- as.data.frame(real[-folds[[i]],])
-    test   <- as.data.frame(real[folds[[i]],])
-    data=list(x.train = makeX(train[,1:(ncol(real)-1)]),
-              y.train = train[,ncol(real)],
-              x.test = makeX(test[,1:(ncol(real)-1)]),
-              y.test = test[,ncol(real)])
-    
-    o <- lmv(X =as.matrix(data$x.train) , Y = unlist(data$y.train), lasso = TRUE) # , lasso = TRUE
-    y.obj <-ymodv(o,gamma = c(seq(0,9, length.out=5)), phi = 0.46)#, rf = FALSE)
-    
-    
-    pred <- fnpred(mod=y.obj,lmvo = o,newdata = data$x.test)
-    
-    rmse <- rbind(rmse,sqrt(colMeans((matrix(rep(data$y.test,ncol(pred)),length(data$y.test))-pred)^2,na.rm = TRUE)) )
-  }
-    rmse_real[k,]=colMeans(as.data.frame(rmse),na.rm = TRUE)
-  }
-  table_real2=rbind(table_real2,colMeans(as.data.frame(rmse_real),na.rm = TRUE))
-}
-
-#table_real2$outcome=outcome
-#table_real2$dataset=data.names
-tf2=round(table_real2,5)
-
-saveRDS(tf,"datamicroarray_10RMSE.RDS")
-
-
-
+# rmse <- c()
+# table_real2=NULL
+# 
+# for (c in 1:length(outcomes)){
+#   print(c)
+#   real <- realDat[[c]]
+#   rmse_real=matrix(data=rep(NA,3*7), nrow=3, ncol=7) # holder k * 6
+#   for (k in 1:3){ ### repeat the cv 3 times
+#     print(k)
+#     folds=createFolds(1:nrow(real), k = 10)
+#     rmse=NULL
+#   for( i in 1:10){
+#     print(i)
+#     #trn <- sample.split(1:nrow(real), SplitRatio = 0.75)
+#     train  <- as.data.frame(real[-folds[[i]],])
+#     test   <- as.data.frame(real[folds[[i]],])
+#     data=list(x.train = makeX(train[,1:(ncol(real)-1)]),
+#               y.train = train[,ncol(real)],
+#               x.test = makeX(test[,1:(ncol(real)-1)]),
+#               y.test = test[,ncol(real)])
+#     
+#     o <- lmv(X =as.matrix(data$x.train) , Y = unlist(data$y.train), lasso = TRUE) # , lasso = TRUE
+#     y.obj <-ymodv(o,gamma = c(seq(0,9, length.out=5)), phi = 0.46)#, rf = FALSE)
+#     
+#     pred <- fnpred(mod=y.obj,lmvo = o,newdata = data$x.test)
+#     
+#     rmse <- rbind(rmse,sqrt(colMeans((matrix(rep(data$y.test,ncol(pred)),length(data$y.test))-pred)^2,na.rm = TRUE)) )
+#   }
+#     rmse_real[k,]=colMeans(as.data.frame(rmse),na.rm = TRUE)
+#   }
+#   table_real2=rbind(table_real2,colMeans(as.data.frame(rmse_real),na.rm = TRUE))
+# }
+# 
+# table_real2$outcome=outcome
+# table_real2$dataset=data.names
+# tf2=round(table_real2,5)
+# 
+# saveRDS(tf,"datamicroarray_10RMSE.RDS")
+# 
+# 
+# 
