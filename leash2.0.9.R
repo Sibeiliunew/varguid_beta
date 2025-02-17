@@ -153,8 +153,7 @@ fnpred <- function(mod,lmvo,newdata, redDim = FALSE){
     yhat0b <- yhatb <- yhat2b <- predict( lmvo$obj.OLS,as.data.frame(newdata))
   }
    if (redDim == TRUE) {
-    datrf <- data.frame(Y = c(lmvo$obj.varGuid$residuals), 
-                              subset(lmvo$obj.varGuid$model, select = -c(1,ncol(lmvo$obj.varGuid$model))) )
+    datrf <- data.frame(Y = c(lmvo$obj.varGuid$residuals),subset(lmvo$obj.varGuid$model, select = -c(1,ncol(lmvo$obj.varGuid$model))) )
    } else {
       datrf <- data.frame(Y = c(lmvo$obj.varGuid$residuals), 
                           lmvo$X )
@@ -181,8 +180,7 @@ fnpred <- function(mod,lmvo,newdata, redDim = FALSE){
    
     yhat2b <- yhat0b + ycenter$y[match(dat.test$z,ycenter$z)]   
     
-    rfo <- rfsrc(Y~., data=  data.frame(Y = c(lmvo$obj.OLS$residuals), 
-                                        subset(lmvo$obj.OLS$model, select = -c(1,ncol(lmvo$obj.OLS$model))) ))
+    rfo <- rfsrc(Y~., data=  data.frame(Y = c(lmvo$obj.OLS$residuals),subset(lmvo$obj.OLS$model, select = -c(1,ncol(lmvo$obj.OLS$model))) ))
    testrf <- predict(rfo,as.data.frame(newdata))
     
    yhat3b <-  c(yhat0b) + c(testrf$predicted) 

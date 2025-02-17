@@ -1,6 +1,9 @@
 source("./20240425/simulation/generate_function_simulation.R")
 source("./leash2.0.9.R")
 source("./VarGuid20250212.R")
+
+source("./leash2.0.6.R")
+source("./VarGuid20240626.R")
 library(glmnet)
 library(tidyverse)
 library(caret)
@@ -208,7 +211,7 @@ for (w in 1:length(data.names)){
 #  index=which(colnames(x)==outcomes[w])
   #x <- scale(x)
  # realDat[[w]] <- data.frame(x[,-index],y=x[,index])}
-   x <- scale(x)
+  # x <- scale(x)
   id=which(colnames(x)==outcomes[w])
   realDat[[w]] <- data.frame(x[,-id],y=x[,id])
 }}
@@ -245,7 +248,7 @@ rmse <- function(dat,  yid = ncol(dat), lasso = FALSE){
 }
 
 table_real=NULL
-for (c in 6: length(outcomes)){
+for (c in 1: length(outcomes)){
   print(c)
   real=realDat[[c]]
   result <- lapply(1:100, function(i) {rmse(dat = real, lasso = TRUE)$varguid}) # 10 repeated train-test
@@ -263,7 +266,79 @@ dat <- data.frame(shipp$x[,-which(colnames(shipp$x)=="V2006")],y=shipp$x[,"V2006
 result5 <- lapply(1:100, function(i) {rmse(dat = dat, lasso = TRUE)$varguid})
 colMeans(do.call(rbind,result5))
 
+###8
+data('west', package = 'datamicroarray')
+dat <- data.frame(west$x[,-132],y=west$x[,132])
+result8 <- lapply(1:100, function(i) {rmse(dat = dat, lasso = TRUE)$varguid})
+colMeans(do.call(rbind,result8))
 
+
+data('subramanian', package = 'datamicroarray')
+dat <- data.frame(subramanian$x[,-which(colnames(subramanian$x)=="BAX")],y=subramanian$x[,"BAX"])
+result10 <- lapply(1:100, function(i) {rmse(dat = dat, lasso = TRUE)$varguid})
+colMeans(do.call(rbind,result10))
+
+
+######10
+data('subramanian', package = 'datamicroarray')
+dat <- data.frame(subramanian$x[,-which(colnames(subramanian$x)=="BAX")],y=subramanian$x[,"BAX"])
+table_real10=NULL
+rm(res)
+while ( nrow(table_real10) < 100){
+  skip_to_next <- FALSE
+  tryCatch(res<- rmse(dat = dat, lasso = TRUE)$varguid,
+           error = function(e) { message('Caught an error!')
+             print(e)
+             skip_to_next = TRUE})
+  
+  if(skip_to_next) { next } 
+  table_real10=rbind(table_real10,res)
+}
+colMeans(table_real10,na.rm = T)
+
+######5
+data('shipp', package = 'datamicroarray')
+dat <- data.frame(shipp$x[,-which(colnames(shipp$x)=="V2006")],y=shipp$x[,"V2006"])
+table_real5=NULL
+rm(res)
+
+res<- rmse(dat = dat, lasso = TRUE)$varguid 
+table_real5=rbind(table_real5,res)
+
+while ( nrow(table_real5) < 100){
+  skip_to_next <- FALSE
+  tryCatch(res<- rmse(dat = dat, lasso = TRUE)$varguid,
+           error = function(e) { message('Caught an error!')
+             print(e)
+             skip_to_next = TRUE})
+  
+  if(skip_to_next) { next } 
+  table_real5=rbind(table_real5,res)
+}
+
+colMeans(table_real5,na.rm = T)
+
+######4
+data('pomeroy', package = 'datamicroarray')
+dat <- data.frame(pomeroy$x[,-which(colnames(pomeroy$x)=="D28473-s-at")],y=pomeroy$x[,"D28473-s-at"])
+table_real4=NULL
+rm(res)
+
+res<- rmse(dat = dat, lasso = TRUE)$varguid # 10 repeated train-test
+table_real4=rbind(table_real4,res)
+
+while ( nrow(table_real4) < 100){
+  skip_to_next <- FALSE
+  tryCatch(res<- rmse(dat = dat, lasso = TRUE)$varguid,
+           error = function(e) { message('Caught an error!')
+             print(e)
+             skip_to_next = TRUE})
+  
+  if(skip_to_next) { next } 
+  table_real4=rbind(table_real4,res)
+}
+
+colMeans(table_real4,na.rm = T)
 
 
 
