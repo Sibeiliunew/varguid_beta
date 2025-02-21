@@ -17,7 +17,6 @@ beta_est=function(X, Y, w, step = 1, lasso = FALSE){
     #find optimal lambda value that minimizes test MSE
     best_lambda <- cv_model$lambda.min
     o <- glmnet(X, Y, alpha = 1, lambda = best_lambda, weights = exp(-step*w))
-    o <- glmnet(X, Y, alpha = 1, lambda = min(cv_model$lambda), weights = exp(-step*w))
     
     o$fitted.values <- predict(o, newx = X)
     
@@ -55,12 +54,12 @@ w_est=function(X,beta_obj, lasso = FALSE){
 }
 ##### check if the above result is correct
 lmv <- function(X, Y, M =  10, step = 1, tol = exp(-10), lasso = FALSE){
-  X <- as.matrix(X)
+  X <- Xo <- as.matrix(X)
 n <- length(Y)
 diff1 <- step
 
 o1 <- o <- beta_est(X, Y, w = rep(1,nrow(X)), lasso = lasso)
-beta <- beta1 <- o1$beta
+beta <- o1$beta
 obj.OLS <- o1$obj
 
 
@@ -100,11 +99,12 @@ obj.coef$HC5 <- coeftest(obj.varGuid, vcov = vcovHC(obj.varGuid, "HC5"))
 }  else {
   obj.lasso <- obj.OLS
   obj.OLS <- list()
+  if (obj.varGuid$df <= 1) { o$obj.varGuid <- obj.lasso}
 }
 
 list(beta=beta, obj.OLS = obj.OLS, obj.lasso = obj.lasso,
      obj.varGuid = obj.varGuid, res = res$res, obj.varGuid.coef = obj.coef,
-     X = X)
+     X = Xo)
 }
 
 

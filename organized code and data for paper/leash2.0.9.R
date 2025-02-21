@@ -130,7 +130,7 @@ list( clust = obj,
 #####################################################
 # prediction using final model 
 ######################################################
-fnpred <- function(mod,lmvo,newdata){
+fnpred <- function(mod,lmvo,newdata, redDim = FALSE){
   newdata <- as.matrix(newdata)
   dat.test <- as.data.frame(newdata)
   nums <- unlist(lapply(dat.test, is.numeric))  
@@ -152,14 +152,12 @@ fnpred <- function(mod,lmvo,newdata){
     yhat0 <- yhat <- yhat2 <- predict(lmvo$obj.varGuid,as.data.frame(newdata))
     yhat0b <- yhatb <- yhat2b <- predict( lmvo$obj.OLS,as.data.frame(newdata))
   }
- # if (!((length(unique(mod$data$z))==1)|(length(unique(mod$data$z))==nrow(mod$data)))) {
-    datrf <- data.frame(Y = c(lmvo$obj.varGuid$residuals), #lmvo$obj.varGuid$model[,1] ,
-                              subset(lmvo$obj.varGuid$model, select = -c(1,ncol(lmvo$obj.varGuid$model))) 
-                       )
-    if (dim(datrf)[2] <= 4){
-      datrf <- data.frame(Y = c(lmvo$obj.varGuid$residuals), #lmvo$obj.varGuid$model[,1] ,
+   if (redDim == TRUE) {
+    datrf <- data.frame(Y = c(lmvo$obj.varGuid$residuals),subset(lmvo$obj.varGuid$model, select = -c(1,ncol(lmvo$obj.varGuid$model))) )
+   } else {
+      datrf <- data.frame(Y = c(lmvo$obj.varGuid$residuals), 
                           lmvo$X )
-    }
+   }
     rfo <- rfsrc(Y~., data= datrf)
     
    # rfo$predicted.oob - lmvo$obj.varGuid$model[,1]
@@ -174,19 +172,28 @@ fnpred <- function(mod,lmvo,newdata){
     resd <- abs(lmvo$obj.varGuid$residuals)-sqrt(abs(lmvo$res$fitted.values))
    # mod$data$y <- abs(resd)*sign(lmvo$obj.varGuid$residuals)
     mod$data$y[which(resd<0)] <- 0
+    
     ycenter <- aggregate(y~z,data = mod$data,mean) 
     testrf <- predict(rfo,as.data.frame(newdata))
     yhat2 <- c(yhat0) + c(testrf$predicted)
+    
+   
     yhat2b <- yhat0b + ycenter$y[match(dat.test$z,ycenter$z)]   
+    
+    rfo <- rfsrc(Y~., data=  data.frame(Y = c(lmvo$obj.OLS$residuals),subset(lmvo$obj.OLS$model, select = -c(1,ncol(lmvo$obj.OLS$model))) ))
+   testrf <- predict(rfo,as.data.frame(newdata))
+    
+   yhat3b <-  c(yhat0b) + c(testrf$predicted) 
  # }
 
   data.frame(
-       yhatVarGuidOriginal = yhat0,
-       yhatVarGuid1 = yhat,
-       yhatVarGuid2 = yhat2,
-       yhatVarGuid3 = yhatb,
-       yhatVarGuid4 = yhat2b,
-       yhatOLS = yhat0b)
+       yhatVarGuidOriginal = c(yhat0),
+       yhatVarGuid1 = c(yhat),
+       yhatVarGuid2 = c(yhat2),
+       yhatVarGuid3 = c(yhatb),
+       yhatVarGuid4 = c(yhat2b),
+       yhatVarGuid5 = c(yhat3b),
+       yhatOLS = c(yhat0b))
 }
 #sm2 <- summary(mod.rlm)
 #print(sm2, digits=2, corr=T)   

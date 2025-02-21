@@ -2,8 +2,6 @@ source("./20240425/simulation/generate_function_simulation.R")
 source("./leash2.0.9.R")
 source("./VarGuid20250212.R")
 
-source("./leash2.0.6.R")
-source("./VarGuid20240626.R")
 library(glmnet)
 library(tidyverse)
 library(caret)
@@ -131,41 +129,41 @@ t4_4=round(table4_4,5)
 
 n <- 100
 d <- 200
-corrv <- c(0, .9)[1] ## change
-overlap_res1=NULL
-overlap_res2=NULL
+corrv <- c(0, .9)[2] ## change
+res_table=res2_table=NULL
+
 
 ######
 for (c in 1:length(simnames)){
-  set.seed(2024)
-  simo <- simulation.sum[[simnames[c]]](n=n, d=d, corrv = corrv)$dta
   print(c)
+  for(i in 1:100){
+    print(i)
+
+  simo <- simulation.sum[[simnames[c]]](n=n, d=d, corrv = corrv)$dta
+
   data=list(x = makeX(simo[,1:(ncol(simo)-1)]),
             y= simo[,ncol(simo)])
-  ### Varguild Lasso
-  set.seed(2024)
-  o1 <- lmv(X =as.matrix(data$x) , Y = unlist(data$y), lasso = TRUE)
-  m=as.data.frame(as.matrix(o1$beta)) %>% filter(s0>0)
+
+  o <- lmv(X =as.matrix(data$x) , Y = unlist(data$y), lasso = TRUE)
+  m=as.tibble(as.matrix(o$obj.varGuid$beta)) %>% filter(s0!=0)
+  m1=as.tibble(as.matrix(o$obj.lasso$beta)) %>% filter(s0!= 0)
   n1=nrow(m)
   select1=rownames(m) # 
-  ### Lasso
-  set.seed(2024)
-  o2 <- cv.glmnet(x =as.matrix(data$x) , y = data$y,alpha = 1, maxit = 5000)
-  m2=as.data.frame(as.matrix(coef(o2, s = "lambda.min"))) %>% filter(s1>0)
-  n2=nrow(m2)
-  select2=rownames(m2) 
+  n2=nrow(m1)
+  select2=rownames(m1) 
   
   n_ol=length(intersect(select1,select2))
-  
-  #overlap_res1[[c]]=c(n1,n2,n_ol)
-  overlap_res2[[c]]=c(n1,n2,n_ol)
+  res1=c(n1,n2,n_ol)
+  res_table=rbind(res_table,res1)
+  }
+  res2=colMeans(res_table)
+  res2_table=rbind(res2_table,res2)
 }
 
-table1=do.call("rbind",overlap_res1) # cor=0
-rownames(table1)=simnames
 
-table2=do.call("rbind",overlap_res2) # cor=0.9
-rownames(table2)=simnames
+rownames(res2_table)=simnames
+
+
 
 
 ###### for larger p real data
@@ -254,30 +252,6 @@ for (c in 1: length(outcomes)){
   result <- lapply(1:100, function(i) {rmse(dat = real, lasso = TRUE)$varguid}) # 10 repeated train-test
   table_real=rbind(table_real,colMeans(do.call(rbind,result)))
 }
-### 4
-data('pomeroy', package = 'datamicroarray')
-dat <- data.frame(pomeroy$x[,-which(colnames(pomeroy$x)=="D28473-s-at")],y=pomeroy$x[,"D28473-s-at"])
-result4 <- lapply(1:100, function(i) {rmse(dat = dat, lasso = TRUE)$varguid})
-colMeans(do.call(rbind,result4))
-
-### 5
-data('shipp', package = 'datamicroarray')
-dat <- data.frame(shipp$x[,-which(colnames(shipp$x)=="V2006")],y=shipp$x[,"V2006"])
-result5 <- lapply(1:100, function(i) {rmse(dat = dat, lasso = TRUE)$varguid})
-colMeans(do.call(rbind,result5))
-
-###8
-data('west', package = 'datamicroarray')
-dat <- data.frame(west$x[,-132],y=west$x[,132])
-result8 <- lapply(1:100, function(i) {rmse(dat = dat, lasso = TRUE)$varguid})
-colMeans(do.call(rbind,result8))
-
-
-data('subramanian', package = 'datamicroarray')
-dat <- data.frame(subramanian$x[,-which(colnames(subramanian$x)=="BAX")],y=subramanian$x[,"BAX"])
-result10 <- lapply(1:100, function(i) {rmse(dat = dat, lasso = TRUE)$varguid})
-colMeans(do.call(rbind,result10))
-
 
 ######10
 data('subramanian', package = 'datamicroarray')
@@ -341,33 +315,41 @@ while ( nrow(table_real4) < 100){
 colMeans(table_real4,na.rm = T)
 
 
+##########################################
+############## ############################OVERLAPPED GENES
 
-############## OVERLAPPED GENES
-overlap_res=NULL
+res3_table=res_table=NULL
 for (c in 1:10){
   real <- realDat[[c]]
     print(c)
-    #trn <- sample.split(1:nrow(real), SplitRatio = 0.75)
-    data=list(x = makeX(as.data.frame(real[,1:(ncol(real)-1)])),
-              y= real[,ncol(real)])
-    ### Varguild Lasso
-    set.seed(2024)
-    o1 <- lmv(X =as.matrix(data$x) , Y = unlist(data$y), lasso = TRUE)
-    m=as.data.frame(as.matrix(o1$beta)) %>% filter(s0>0)
+    for (i in 1:100){
+      print(i)
+    sample <- sample.split(1:nrow(real), SplitRatio = 0.8)
+    dat=real[sample,]
+    data=list(x = makeX(as.data.frame(dat[,1:(ncol(real)-1)])),
+              y= dat[,ncol(real)])
+
+    o <- lmv(X =as.matrix(data$x) , Y = unlist(data$y), lasso = TRUE)
+    m=as.tibble(as.matrix(o$obj.varGuid$beta)) %>% filter(s0!=0)
+    m1=as.tibble(as.matrix(o$obj.lasso$beta)) %>% filter(s0!= 0)
     n1=nrow(m)
     select1=rownames(m) # 
-    ### Lasso
-    o2 <- cv.glmnet(x =as.matrix(data$x) , y = data$y,alpha = 1,lambda =exp(seq(-10,10,length=200) ))
-    m2=as.data.frame(as.matrix(coef(o2, s = "lambda.min"))) %>% filter(s1>0)
-    n2=nrow(m2)
-    select2=rownames(m2) 
-    
+    n2=nrow(m1)
+    select2=rownames(m1) 
+
+    # ### Lasso
+    # o2 <- cv.glmnet(x =as.matrix(data$x) , y = data$y,alpha = 1,lambda =exp(seq(-10,10,length=200) ))
+    # m2=as.data.frame(as.matrix(coef(o2, s = "lambda.min"))) %>% filter(s1>0)
     n_ol=length(intersect(select1,select2))
-    
-  overlap_res[[c]]=c(n1,n2,n_ol)
+
+    res1=c(n1,n2,n_ol)
+    res_table=rbind(res_table,res1)
+}
+res3=colMeans(res_table)
+res3_table=rbind(res3_table,res3)
 }
 
-table4=do.call("rbind",overlap_res)
+rownames(res3_table)=data.names
 
 ####### RMSE for real data
 # rmse <- c()
